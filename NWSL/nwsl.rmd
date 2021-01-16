@@ -39,19 +39,28 @@ players <- nwslR::player
 # Goal Efficiency
 
 ```{r pk analysis}
+#gives us goals/min for each season
 nwsl_goals_per_min <- player_season_stats %>%
   group_by(player) %>%
   summarise(goals_per_min = gls/min)
 
+nwsl_goals_per_min
+
+#gives us an average goals/min over the player's career (2013 - 2019)
 nwsl_goals_per_min_career <- nwsl_goals_per_min %>%
   group_by(player) %>%
   summarise(goals_per_min = mean(goals_per_min))
+
+nwsl_goals_per_min_career
 ```
 
 
 ```{r joining the datasets}
-player_season_stats <- inner_join(basic_player_data, player_season_stats, by = "person_id", copy = FALSE) %>%
+player_season_stats <- inner_join(players, player_season_stats, by = "person_id", copy = FALSE) %>%
   select(-nation.y, -pos.y, -name_other)
+
+player_season_stats <- player_season_stats %>%
+  rename(nation = nation.x, pos = pos.x)
 ```
 
 ```{r a look into carli lloyd}
@@ -64,7 +73,7 @@ player_season_stats %>%
 
 ```
 
-```{r}
+```{r Carli Lloyd's goals}
 player_season_stats %>%
   filter(player == c("Carli Lloyd")) %>%
   ggplot(aes(x = season, y = gls)) + 
@@ -72,23 +81,28 @@ player_season_stats %>%
 
 ```
 
-
 ```{r}
-player_season_stats <- player_season_stats %>%
-  rename(pos = pos.x, nation = nation.x)
+player_season_stats %>%
+  filter(player == c("Alex Morgan")) %>%
+  ggplot(aes(x = season, y = gls)) + 
+  geom_point(shape = "star", color = "red")
 ```
+
+
+
+# Goals & Assists
 
 ```{r do selfish players score more?}
 p1 <- player_season_stats %>%
   #group_by(team_id) %>%
   ggplot(aes(x = gls, y = ast)) +
-  geom_point(color = "blue") + 
+  geom_point(shape = "square", color = "blue") + 
   geom_smooth(color = "red")
 
-ggplotly(p1, )
+ggplotly(p1)
 
 ```
-There appears to be a weak positive correlation between goals and assists per season. The correlation grows weaker as the player scores more goals, meaning that they assist less. Let's look at this by position:
+There appears to be a weak, positive correlation between goals and assists per season. The correlation grows weaker as the player scores more goals, meaning that they assist less. Let's look at this by position:
 
 
 ```{r}
@@ -107,6 +121,8 @@ ggplotly(
 
 
 ```
+Defenders have the lowest median assists per goal ratio, presumably because they do not usually score nor assist, while forwards have the second lowest, presumably because they score way more than they assist. But, strangely enough, the position category with the highest assists to goal ratio is the category of players who play both Defense and Forward. This is most likely occuring because: players who fill both the DF and FW positions are most likely placed on the outside, the wingers. Therefore, they are probably quick and skilled at crossing the ball, leading to a higher assist ratio!
+
 ```{r looking team-by-team}
 
 
@@ -115,7 +131,7 @@ maxgoals <- team_data %>%
   group_by(team_id) %>%
   group_by(season) %>%
   summarize(max(goals)) %>%
-  ggplot(x = year, y = )
+  ggplot(x = year, y = goals)
 
 
 
@@ -148,7 +164,7 @@ ggplotly(all_goals)
 
 ```
 
-There does not appear to be a significant trend in overal goal scorring from 2016 to 2019. 2016, however, is significantly lower than 2017, 2018, and 2019, which are all very similar in median values. 
+There does not appear to be a significant trend in overal goal scorring from 2016 to 2019. 2016, however, 2016 is noticably lower than 2017, 2018, and 2019, which are all very similar in median values. 
 
 # The Draft
 
@@ -236,4 +252,115 @@ adv_player_stats %>%
 ```
 
 After some further investigation, we find that De Vanna has only played in 3 games, rendering her passing accuracy score less than completely picturesque of her footballer skills. Although her accuracy for those 3 games in 2016 is certanly notable, it is not entirely fair to compare them again Staab's 24, or even Solo's 8. I might place a filter on number of entries so we can compare passing accuracy across players that have played many games and therfore have had their passing tested under many circumstances. 
+
+# Mallory Pugh
+
+```{r}
+mallory_pugh <- adv_player_stats %>%
+  filter(player_name == "Mallory Pugh") %>%
+  filter(year == "2018")
+
+mallory_pugh$passing_acc
+
+```
+
+
+```{r getting a date}
+library(stringr)
+
+# get the date into its own columns by year, month, day
+adv_player_stats$date <- 
+  str_sub(adv_player_stats$game_id,-10, -1)
+
+adv_player_stats <- adv_player_stats %>%
+  separate(date, c("year", "month", "day"), "-")
+
+adv_player_stats$date
+adv_player_stats$month
+adv_player_stats$year
+```
+
+```{r}
+year_by_year_passing_accuracy <- adv_player_stats %>%
+  summarize(player_name, passing_acc, year)
+
+year_by_year_passing_accuracy
+
+mal_pugh_pass_acc <- year_by_year_passing_accuracy %>%
+  group_by(year) %>%
+  filter(player_name == "Mallory Pugh") %>%
+  ggplot(aes(x = year, y = passing_acc)) +
+  geom_point(color = "red", shape = "star") +
+  geom_boxplot(color = "blue") +
+  ylab("passing accuracy") + 
+  ggtitle("Mallory Pugh's NWSL Passing Accuracy")
+
+
+ggplotly(mal_pugh_pass_acc)
+
+```
+
+```{r Carli Lloyd's NWSL Passing Accuracy}
+ggplotly(
+  year_by_year_passing_accuracy %>%
+  group_by(year) %>%
+  filter(player_name == "Carli Lloyd") %>%
+  ggplot(aes(x = year, y = passing_acc)) +
+  geom_point(color = "red", shape = "star") +
+  geom_boxplot(color = "blue") +
+  ylab("passing accuracy") + 
+  ggtitle("Carli Lloyd's NWSL Passing Accuracy")
+)
+
+```
+
+```{r Rose Lavelle's NWSL Passing Accuracy}
+ggplotly(
+  year_by_year_passing_accuracy %>%
+  group_by(year) %>%
+  filter(player_name == "Rose Lavelle") %>%
+  ggplot(aes(x = year, y = passing_acc)) +
+  geom_point(color = "red", shape = "star") +
+  geom_boxplot(color = "blue") +
+  ylab("passing accuracy") + 
+  ggtitle("Rose Lavelle's NWSL Passing Accuracy")
+)
+```
+
+```{r Alex Morgan's NWSL Passing Accuracy}
+ggplotly(
+  year_by_year_passing_accuracy %>%
+  group_by(year) %>%
+  filter(player_name == "Alex Morgan") %>%
+  ggplot(aes(x = year, y = passing_acc)) +
+  geom_point(color = "red", shape = "star") +
+  geom_boxplot(color = "blue") +
+  ylab("passing accuracy") + 
+  ggtitle("Alex Morgan's NWSL Passing Accuracy")
+)
+```
+
+
+```{r}
+year_by_year_passing_accuracy %>%
+  filter(player_name == "Christen Press")
+```
+
+
+# Goalkeepers
+
+```{r}
+alyssa_naeher <- adv_player_stats %>%
+  filter(player_name == "Alyssa Naeher")
+
+hope_solo <- adv_player_stats %>%
+  filter(player_name == "Hope Solo")
+
+ashlyn_harris <- adv_player_stats %>%
+  filter(player_name == "Ashlyn Harris")
+
+adrianna_franch <- adv_player_stats %>%
+  filter(player_name == "Adrianna Franch")
+```
+
 
