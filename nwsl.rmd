@@ -1,0 +1,246 @@
+---
+title: "NWSL Preliminary Data Viewing"
+author: "Hannah Mandell"
+date: "1/14/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+#install.packages("devtools")
+library(devtools)
+devtools::install_github("adror1/nwslR")
+
+library(ggplot2)
+library(lubridate)
+library(dplyr)
+library(tidyr)
+library(broom)
+library(praise)
+library(nwslR)
+library(plotly)
+```
+
+```{r loading data}
+player_season_stats <- nwslR::fieldplayer_overall_season_stats
+team_data <- nwslR::team_stats_season
+draft_data <- nwslR::draftpicks
+adv_player_stats <- nwslR::adv_player_stats	
+adv_team_stats <- nwslR::adv_team_stats	
+awards <- nwslR::award
+franchise <- nwslR::franchise
+players <- nwslR::player
+
+```
+
+```{r}
+
+```
+
+
+
+```{r pk analysis}
+nwsl_goals_per_min <- player_season_stats %>%
+  group_by(player) %>%
+  summarise(goals_per_min = gls/min)
+
+nwsl_goals_per_min_career <- nwsl_goals_per_min %>%
+  group_by(player) %>%
+  summarise(goals_per_min = mean(goals_per_min))
+```
+
+```{r}
+basic_player_data <-nwslR::player
+```
+
+```{r joining the datasets}
+player_season_stats <- inner_join(basic_player_data, player_season_stats, by = "person_id", copy = FALSE) %>%
+  select(-nation.y, -pos.y, -name_other)
+```
+
+```{r a look into carli lloyd}
+basic_player_data %>%
+  filter(player == "Carli Lloyd")
+
+
+player_season_stats %>%
+  filter(player == "Carli Lloyd")
+
+```
+
+```{r}
+player_season_stats %>%
+  filter(player == c("Carli Lloyd")) %>%
+  ggplot(aes(x = season, y = gls)) + 
+  geom_point(color = "red")
+
+```
+
+
+```{r}
+player_season_stats <- player_season_stats %>%
+  rename(pos = pos.x, nation = nation.x)
+```
+
+```{r do selfish players score more?}
+p1 <- player_season_stats %>%
+  #group_by(team_id) %>%
+  ggplot(aes(x = gls, y = ast)) +
+  geom_point(color = "blue") + 
+  geom_smooth(color = "red")
+
+ggplotly(p1, )
+
+```
+There appears to be a weak positive correlation between goals and assists per season. The correlation grows weaker as the player scores more goals, meaning that they assist less. Let's look at this by position:
+
+
+```{r}
+player_season_stats %>%
+  group_by(pos) %>%
+  summarise(count = n())
+```
+```{r}
+ggplotly(
+  player_season_stats %>%
+  group_by(pos) %>%
+  #mutate(gls = median(gls), ast = median(ast)) %>%#
+  ggplot(aes(x =  pos, y = (ast/gls))) +
+  geom_boxplot(outlier.shape = NA)
+  )
+
+
+```
+```{r looking team-by-team}
+
+
+
+maxgoals <- team_data %>%
+  group_by(team_id) %>%
+  group_by(season) %>%
+  summarize(max(goals)) %>%
+  ggplot(x = year, y = )
+
+
+
+maxgoals
+
+p2 <- 
+  ggplot(maxgoals, aes(x = year, y = max(goals))
+         
+ggplotly(p2)
+
+```
+
+```{r max goals in any season}
+maxgoals <= team_data %>%
+  group_by(team_id) %>%
+  summarize(max(goals))
+  
+maxgoals
+```
+
+```{r all goals}
+
+all_goals <- team_data %>%
+  group_by(season) %>%
+  ggplot(aes(x = season, y = goals)) +
+  geom_point(color = "red") +
+  geom_smooth(color = "black")
+
+ggplotly(all_goals)
+
+```
+
+There does not appear to be a significant trend in overal goal scorring from 2016 to 2019. 2016, however, is significantly lower than 2017, 2018, and 2019, which are all very similar in median values. 
+
+# The Draft
+
+Let's explore some of the rounds & popular feeder university programs. 
+
+```{r first round feeders}
+
+top_feeders <- draft_data %>%
+  filter(round == 1) %>%
+  count(previous_team, sort = TRUE)
+
+top_feeders
+```
+UCLA is the top provider of 1st round NWSL draft picks since 2013, closely followed by FSU and Stanford. Let's explore the draft as a whole:
+
+```{r all rounds feeders}
+
+draft_colleges <- draft_data %>%
+    count(previous_team, sort = TRUE)
+
+draft_colleges
+
+```
+UCLA is again the top contender, but Penn State situates itself in second place's position, providing 12 NWSL draft picks since 2013. 
+
+# Passing Accuracy
+
+```{r creating a full name variable}
+
+adv_player_stats$player_name = paste(adv_player_stats$first_name, adv_player_stats$last_name)
+  
+head(adv_player_stats$player_name)
+```
+
+```{r calculate passing accuracy for each game}
+adv_player_stats$passing_acc = adv_player_stats$accurate_pass / adv_player_stats$total_pass
+
+head(adv_player_stats$passing_acc)
+```
+
+
+```{r passing accuracy!}
+
+passing_accuracy <- adv_player_stats %>%
+  group_by(player_name) %>%
+  summarize(avg_passing_acc = mean(passing_acc))
+
+passing_accuracy <- passing_accuracy %>%
+  arrange(desc(avg_passing_acc))
+
+passing_accuracy
+```
+The NWSL players with the statistically highest passing accuracy are: 1) Lisa De Vanna, 2) Samantha Staab, and 3) Hope Solo. Let's check them out:
+
+```{r}
+
+player_name_and_id <- data_frame(players$person_id, players$player)
+
+player_name_and_id
+
+player_name_and_id <- player_name_and_id %>%
+  rename(person_id = "players$person_id", player = "players$player")
+
+```
+
+```{r putting names into other dataset}
+player_season_stats <- full_join(player_name_and_id, player_season_stats, by = "person_id")
+```
+
+
+```{r}
+player_season_stats %>%
+  filter(player == "Lisa De Vanna")
+
+adv_player_stats %>%
+  filter(player_name == "Lisa De Vanna")
+
+adv_player_stats %>%
+  filter(player_name == "Samantha Staab")
+
+adv_player_stats %>%
+  filter(player_name == "Hope Solo")
+
+
+```
+
+After some further investigation, we find that De Vanna has only played in 3 games, rendering her passing accuracy score less than completely picturesque of her footballer skills. Although her accuracy for those 3 games in 2016 is certanly notable, it is not entirely fair to compare them again Staab's 24, or even Solo's 8. I might place a filter on number of entries so we can compare passing accuracy across players that have played many games and therfore have had their passing tested under many circumstances. 
+
