@@ -36,11 +36,7 @@ players <- nwslR::player
 
 ```
 
-```{r}
-
-```
-
-
+# Goal Efficiency
 
 ```{r pk analysis}
 nwsl_goals_per_min <- player_season_stats %>%
@@ -52,9 +48,6 @@ nwsl_goals_per_min_career <- nwsl_goals_per_min %>%
   summarise(goals_per_min = mean(goals_per_min))
 ```
 
-```{r}
-basic_player_data <-nwslR::player
-```
 
 ```{r joining the datasets}
 player_season_stats <- inner_join(basic_player_data, player_season_stats, by = "person_id", copy = FALSE) %>%
@@ -62,7 +55,7 @@ player_season_stats <- inner_join(basic_player_data, player_season_stats, by = "
 ```
 
 ```{r a look into carli lloyd}
-basic_player_data %>%
+players %>%
   filter(player == "Carli Lloyd")
 
 
@@ -136,7 +129,7 @@ ggplotly(p2)
 ```
 
 ```{r max goals in any season}
-maxgoals <= team_data %>%
+maxgoals <- team_data %>%
   group_by(team_id) %>%
   summarize(max(goals))
   
