@@ -41,10 +41,18 @@ players <- nwslR::player
 ```{r pk analysis}
 #gives us goals/min for each season
 nwsl_goals_per_min <- player_season_stats %>%
-  group_by(player) %>%
-  summarise(goals_per_min = gls/min)
+  group_by(season) %>%
+  filter(pos == "FW") %>%
+  mutate(goals_per_min = gls/min) %>%
+  filter(goals_per_min > 0, goals_per_min < .1) 
 
-nwsl_goals_per_min
+
+nwsl_goals_per_min_plot <- nwsl_goals_per_min %>%
+  ggplot(aes(x = season, y = goals_per_min)) +
+  geom_point(color = "blue") +
+  geom_boxplot(color = "red", outliers = FALSE)
+
+ggplotly(nwsl_goals_per_min_plot, tooltip = "player_name")
 
 #gives us an average goals/min over the player's career (2013 - 2019)
 nwsl_goals_per_min_career <- nwsl_goals_per_min %>%
@@ -73,7 +81,7 @@ player_season_stats %>%
 
 ```
 
-```{r Carli Lloyd's goals}
+```{r Carli Lloyd goals}
 player_season_stats %>%
   filter(player == c("Carli Lloyd")) %>%
   ggplot(aes(x = season, y = gls)) + 
@@ -81,9 +89,11 @@ player_season_stats %>%
 
 ```
 
-```{r}
+```{r Goals per Season - player stats}
+name = "Alex Morgan"
+
 player_season_stats %>%
-  filter(player == c("Alex Morgan")) %>%
+  filter(player == c(name)) %>%
   ggplot(aes(x = season, y = gls)) + 
   geom_point(shape = "star", color = "red")
 ```
@@ -188,7 +198,7 @@ draft_colleges <- draft_data %>%
 draft_colleges
 
 ```
-UCLA is again the top contender, but Penn State situates itself in second place's position, providing 12 NWSL draft picks since 2013. 
+UCLA is again the top contender, but Penn State situates itself in second place's position, providing 12 NWSL draft picks since 2013.***NOTE: I need to clean this data better before making any substantial statements about it. 
 
 # Passing Accuracy
 
@@ -253,16 +263,180 @@ adv_player_stats %>%
 
 After some further investigation, we find that De Vanna has only played in 3 games, rendering her passing accuracy score less than completely picturesque of her footballer skills. Although her accuracy for those 3 games in 2016 is certanly notable, it is not entirely fair to compare them again Staab's 24, or even Solo's 8. I might place a filter on number of entries so we can compare passing accuracy across players that have played many games and therfore have had their passing tested under many circumstances. 
 
-# Mallory Pugh
+# Mallory Pugh Comparison
 
-```{r}
-mallory_pugh <- adv_player_stats %>%
+## USWNT FWs passing accuracies
+```{r USWNT forwards' NWSL passing accuracy}
+#mallory pugh
+mallory_pugh_passacc <- adv_player_stats %>%
   filter(player_name == "Mallory Pugh") %>%
-  filter(year == "2018")
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
 
-mallory_pugh$passing_acc
+# sophia smith not in this NWSL database?
+sophia_smith_passacc <- adv_player_stats %>%
+  filter(player_name == "Sophia Smith") %>%
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
+
+#lynn williams
+lynn_williams_passacc <- adv_player_stats %>%
+  filter(player_name == "Lynn Williams") %>%
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
+
+
+#megan rapinoe
+megan_rapinoe_passacc <- adv_player_stats %>%
+  filter(player_name == "Megan Rapinoe") %>%
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
+
+
+
+# carli lloyd
+carli_lloyd_passacc <- adv_player_stats %>%
+  filter(player_name == "Carli Lloyd") %>%
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
+  
 
 ```
+
+```{r writing the UWSNT's forwards' passing accuracies to a csv}
+
+uswnt_fw_passacc <- adv_player_stats %>%
+  filter(player_name == c("Mallory Pugh", "Lynn Williams", "Carli Lloyd", "Megan Rapinoe")) %>%
+  drop_na(passing_acc) %>%
+  summarize(passing_acc, player_name, year)
+  
+uswnt_fw_passacc
+
+write.csv(uswnt_fw_passacc, "uswnt_fw_passacc.csv")
+
+```
+
+## USWNT FWs scoring frequencies
+```{r USWNT forwards' NWSL scoring frequencies}
+
+megan_rapinoe_season_goals_per_min <- player_season_stats %>%
+  group_by(season) %>%
+  filter(player == c("Megan Rapinoe")) %>%
+  mutate(goals_per_min = gls/min) %>%
+  summarize(player, season, goals_per_min)
+
+uswnt_fw_goals_per_min <- rbind(megan_rapinoe_season_goals_per_min, carli_lloyd_season_goals_per_min, lynn_williams_season_goals_per_min, mal_pugh_season_goals_per_min, by = "season")
+
+write.csv(uswnt_fw_goals_per_min, "uswnt_fw_season_goals_per_min.csv")
+
+```
+
+## USWNT FWs Final Third Passes
+```{r}
+uswnt_fw_final_third_passes <- adv_player_stats %>%
+  filter(full_name = c("Mallory Pugh")) %>%
+  summarise(successful_final_third_passes)
+  
+  
+```
+
+## USWNT FW Summary
+```{r}
+uswnt_fw_nswl_stats <- adv_player_stats %>%
+  filter(player_name == c("Mallory Pugh", "Carli Lloyd", "Lynn Williams", "Megan Rapinoe")) %>%
+  mutate(forward_zone_pass_acc = accurate_fwd_zone_pass/total_fwd_zone_pass) %>%
+  group_by(player_name) %>%
+  summarise(player_name, year, mins_played, goals, big_chance_missed, goal_assist, total_offside, forward_zone_pass_acc, turnover, ontarget_att_assist, ontarget_scoring_att, successful_final_third_passes, leftside_pass, rightside_pass)
+
+
+
+
+avg_uswnt_fw_nswl_stats <- adv_player_stats %>%
+  filter(player_name == c("Mallory Pugh", "Carli Lloyd", "Lynn Williams", "Megan Rapinoe")) %>%
+  mutate(forward_zone_pass_acc = accurate_fwd_zone_pass/total_fwd_zone_pass) %>%
+  group_by(year) %>%
+  group_by(player_name) %>%
+  mutate(avg_mins_played = mean(mins_played)) %>%
+  #mutate(avg_forward_zone_pass_acc = mean(forward_zone_pass_acc)) %>%
+  mutate(avg_turnover = mean(turnover)) %>%
+  mutate(avg_goals = mean(goals)) %>%
+  mutate(avg_big_chance_missed = mean(big_chance_missed)) %>%
+  mutate(avg_goal_assist = mean(goal_assist)) %>%
+  mutate(avg_total_offside = mean(total_offside)) %>%
+  mutate(avg_ontarget_att_assist = mean(ontarget_att_assist)) %>%
+  mutate(avg_ontarget_scoring_att = mean(ontarget_scoring_att)) %>%
+  mutate(avg_successful_final_third_passes = mean(successful_final_third_passes)) %>%
+  mutate(avg_left_pass = mean(leftside_pass)) %>%
+  mutate(avg_right_pass = mean(rightside_pass)) %>%
+  summarise(player_name, year, avg_mins_played, avg_turnover, avg_goals,avg_big_chance_missed , avg_goal_assist, avg_total_offside,  avg_ontarget_att_assist, avg_ontarget_scoring_att, avg_successful_final_third_passes, avg_left_pass, avg_right_pass)
+
+avg_uswnt_fw_nswl_stats
+
+write.csv(uswnt_fw_nswl_stats, "uswnt_fw_nswl_stats.csv")
+```
+
+```{r}
+megan_rapinoe_annual_nswl_stats <- adv_player_stats %>%
+  filter(player_name == c("Megan Rapinoe")) %>%
+  mutate(forward_zone_pass_acc = accurate_fwd_zone_pass/total_fwd_zone_pass) %>%
+  group_by(year) %>%
+  mutate(avg_mins_played = mean(mins_played)) %>%
+  #mutate(avg_forward_zone_pass_acc = mean(forward_zone_pass_acc)) %>%
+  mutate(avg_turnover = mean(turnover)) %>%
+  mutate(avg_goals = mean(goals)) %>%
+  mutate(avg_big_chance_missed = mean(big_chance_missed)) %>%
+  mutate(avg_goal_assist = mean(goal_assist)) %>%
+  mutate(avg_total_offside = mean(total_offside)) %>%
+  mutate(avg_ontarget_att_assist = mean(ontarget_att_assist)) %>%
+  mutate(avg_ontarget_scoring_att = mean(ontarget_scoring_att)) %>%
+  mutate(avg_successful_final_third_passes = mean(successful_final_third_passes)) %>%
+  mutate(avg_left_pass = mean(leftside_pass)) %>%
+  mutate(avg_right_pass = mean(rightside_pass)) %>%
+  
+  summarise(year, avg_mins_played, avg_turnover, avg_goals,avg_big_chance_missed , avg_goal_assist, avg_total_offside,  avg_ontarget_att_assist, avg_ontarget_scoring_att, avg_successful_final_third_passes, avg_left_pass, avg_right_pass)
+
+
+megan_rapinoe_annual_nswl_stats <- distinct(megan_rapinoe_annual_nswl_stats)
+
+write.csv(megan_rapinoe_annual_nswl_stats,"FW/megan_rapinoe_annual_nswl_stats.csv")
+
+```
+
+
+
+# NWSL FW Summary
+```{r for all forwards in the league, what are the average stats?}
+# 
+starters_fw_nswl_stats <- adv_player_stats %>%
+  filter(position == c("Striker")) %>%
+  mutate(forward_zone_pass_acc = accurate_fwd_zone_pass/total_fwd_zone_pass) %>%
+  group_by(year) %>%
+  mutate(avg_mins_played = mean(mins_played)) %>%
+  #mutate(avg_forward_zone_pass_acc = mean(forward_zone_pass_acc)) %>%
+  mutate(avg_turnover = mean(turnover)) %>%
+  mutate(avg_goals = mean(goals)) %>%
+  mutate(avg_big_chance_missed = mean(big_chance_missed)) %>%
+  mutate(avg_goal_assist = mean(goal_assist)) %>%
+  mutate(avg_total_offside = mean(total_offside)) %>%
+  mutate(avg_ontarget_att_assist = mean(ontarget_att_assist)) %>%
+  mutate(avg_ontarget_scoring_att = mean(ontarget_scoring_att)) %>%
+  mutate(avg_successful_final_third_passes = mean(successful_final_third_passes)) %>%
+  mutate(avg_left_pass = mean(leftside_pass)) %>%
+  mutate(avg_right_pass = mean(rightside_pass)) %>%
+  
+  summarise(year, avg_mins_played, avg_turnover, avg_goals,avg_big_chance_missed , avg_goal_assist, avg_total_offside,  avg_ontarget_att_assist, avg_ontarget_scoring_att, avg_successful_final_third_passes, avg_left_pass, avg_right_pass)
+
+#distinct(fw_nswl_stats)
+
+write.csv(distinct(starters_fw_nswl_stats), "starters_avg_fw_nwsl_stats.csv")
+
+
+
+starters_fw_nswl_stats 
+
+```
+
+
 
 
 ```{r getting a date}
@@ -300,7 +474,7 @@ ggplotly(mal_pugh_pass_acc)
 
 ```
 
-```{r Carli Lloyd's NWSL Passing Accuracy}
+```{r Carli Lloyd NWSL Passing Accuracy}
 ggplotly(
   year_by_year_passing_accuracy %>%
   group_by(year) %>%
@@ -314,7 +488,7 @@ ggplotly(
 
 ```
 
-```{r Rose Lavelle's NWSL Passing Accuracy}
+```{r Rose Lavelle NWSL Passing Accuracy}
 ggplotly(
   year_by_year_passing_accuracy %>%
   group_by(year) %>%
@@ -327,7 +501,7 @@ ggplotly(
 )
 ```
 
-```{r Alex Morgan's NWSL Passing Accuracy}
+```{r Alex Morgan NWSL Passing Accuracy}
 ggplotly(
   year_by_year_passing_accuracy %>%
   group_by(year) %>%
