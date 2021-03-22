@@ -6,7 +6,8 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warnings = FALSE, message = FALSE)
+
 ```
 
 
@@ -23,8 +24,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r packages}
 #install.packages("devtools")
-install.packages("devtools")
-devtools::install_github("adror1/nwslR")
+#install.packages("devtools")
+#devtools::install_github("adror1/nwslR")
 
 library(ggplot2)
 library(lubridate)
@@ -49,6 +50,14 @@ players <- nwslR::player
 
 # Goal Efficiency
 
+```{r joining the datasets}
+player_season_stats <- inner_join(players, player_season_stats, by = "person_id", copy = FALSE) %>%
+  select(-nation.y, -pos.y, -name_other)
+
+player_season_stats <- player_season_stats %>%
+  rename(nation = nation.x, pos = pos.x)
+```
+
 ```{r pk analysis}
 #gives us goals/min for each season
 nwsl_goals_per_min <- player_season_stats %>%
@@ -71,15 +80,6 @@ nwsl_goals_per_min_career <- nwsl_goals_per_min %>%
   summarise(goals_per_min = mean(goals_per_min))
 
 nwsl_goals_per_min_career
-```
-
-
-```{r joining the datasets}
-player_season_stats <- inner_join(players, player_season_stats, by = "person_id", copy = FALSE) %>%
-  select(-nation.y, -pos.y, -name_other)
-
-player_season_stats <- player_season_stats %>%
-  rename(nation = nation.x, pos = pos.x)
 ```
 
 ```{r a look into carli lloyd}
@@ -155,13 +155,8 @@ maxgoals <- team_data %>%
   ggplot(x = year, y = goals)
 
 
+#ggplot(aes(x = maxgoals[["data"]][["season"]], y = maxgoals[["data"]][["max(goals)"]]))
 
-maxgoals
-
-p2 <- 
-  ggplot(maxgoals, aes(x = year, y = max(goals))
-         
-ggplotly(p2)
 
 ```
 
@@ -258,10 +253,7 @@ player_season_stats <- full_join(player_name_and_id, player_season_stats, by = "
 
 ```{r}
 player_season_stats %>%
-  filter(player == "Lisa De Vanna")
-
-adv_player_stats %>%
-  filter(player_name == "Lisa De Vanna")
+  filter(player.x == "Lisa De Vanna")
 
 adv_player_stats %>%
   filter(player_name == "Samantha Staab")
@@ -277,8 +269,20 @@ After some further investigation, we find that De Vanna has only played in 3 gam
 # Mallory Pugh Comparison
 
 ## USWNT FWs passing accuracies
-```{r USWNT forwards' NWSL passing accuracy}
-#mallory pugh
+
+```{r getting a date}
+library(stringr)
+
+# get the date into its own columns by year, month, day
+adv_player_stats$date <- 
+  str_sub(adv_player_stats$game_id,-10, -1)
+
+adv_player_stats <- adv_player_stats %>%
+  separate(date, c("year", "month", "day"), "-")
+```
+
+```{r USWNT forwards NWSL passing accuracy}
+# mallory pugh
 mallory_pugh_passacc <- adv_player_stats %>%
   filter(player_name == "Mallory Pugh") %>%
   drop_na(passing_acc) %>%
@@ -290,20 +294,18 @@ sophia_smith_passacc <- adv_player_stats %>%
   drop_na(passing_acc) %>%
   summarize(passing_acc, player_name, year)
 
-#lynn williams
+# lynn williams
 lynn_williams_passacc <- adv_player_stats %>%
   filter(player_name == "Lynn Williams") %>%
   drop_na(passing_acc) %>%
   summarize(passing_acc, player_name, year)
 
 
-#megan rapinoe
+# megan rapinoe
 megan_rapinoe_passacc <- adv_player_stats %>%
   filter(player_name == "Megan Rapinoe") %>%
   drop_na(passing_acc) %>%
   summarize(passing_acc, player_name, year)
-
-
 
 # carli lloyd
 carli_lloyd_passacc <- adv_player_stats %>%
@@ -314,7 +316,7 @@ carli_lloyd_passacc <- adv_player_stats %>%
 
 ```
 
-```{r writing the UWSNT's forwards' passing accuracies to a csv}
+```{r writing the UWSNT forwards passing accuracies to a csv}
 
 uswnt_fw_passacc <- adv_player_stats %>%
   filter(player_name == c("Mallory Pugh", "Lynn Williams", "Carli Lloyd", "Megan Rapinoe")) %>%
@@ -328,13 +330,32 @@ write.csv(uswnt_fw_passacc, "uswnt_fw_passacc.csv")
 ```
 
 ## USWNT FWs scoring frequencies
-```{r USWNT forwards' NWSL scoring frequencies}
+```{r USWNT forwards NWSL scoring frequencies}
 
 megan_rapinoe_season_goals_per_min <- player_season_stats %>%
   group_by(season) %>%
-  filter(player == c("Megan Rapinoe")) %>%
+  filter(player.x == c("Megan Rapinoe")) %>%
   mutate(goals_per_min = gls/min) %>%
-  summarize(player, season, goals_per_min)
+  summarize(player.x, season, goals_per_min)
+
+carli_lloyd_season_goals_per_min <- player_season_stats %>%
+  group_by(season) %>%
+  filter(player.x == c("Carli Lloyd")) %>%
+  mutate(goals_per_min = gls/min) %>%
+  summarize(player.x, season, goals_per_min)
+
+lynn_williams_season_goals_per_min <- player_season_stats %>%
+  group_by(season) %>%
+  filter(player.x == c("Lynn Williams")) %>%
+  mutate(goals_per_min = gls/min) %>%
+  summarize(player.x, season, goals_per_min)
+
+mal_pugh_season_goals_per_min <- player_season_stats %>%
+  group_by(season) %>%
+  filter(player.x == c("Mallory Pugh")) %>%
+  mutate(goals_per_min = gls/min) %>%
+  summarize(player.x, season, goals_per_min)
+
 
 uswnt_fw_goals_per_min <- rbind(megan_rapinoe_season_goals_per_min, carli_lloyd_season_goals_per_min, lynn_williams_season_goals_per_min, mal_pugh_season_goals_per_min, by = "season")
 
@@ -345,10 +366,11 @@ write.csv(uswnt_fw_goals_per_min, "uswnt_fw_season_goals_per_min.csv")
 ## USWNT FWs Final Third Passes
 ```{r}
 uswnt_fw_final_third_passes <- adv_player_stats %>%
-  filter(full_name = c("Mallory Pugh")) %>%
-  summarise(successful_final_third_passes)
+  filter(player_name == c("Mallory Pugh", "Lynn Williams", "Carli Lloyd", "Megan Rapinoe")) %>%
+  group_by(player_name) %>%
+  summarise(mean(successful_final_third_passes))
   
-  
+uswnt_fw_final_third_passes
 ```
 
 ## USWNT FW Summary
@@ -437,7 +459,7 @@ starters_fw_nswl_stats <- adv_player_stats %>%
   mutate(avg_left_pass = mean(leftside_pass)) %>%
   mutate(avg_right_pass = mean(rightside_pass)) %>%
   
-  summarise(year, avg_mins_played, avg_turnover, avg_goals,avg_big_chance_missed , avg_goal_assist, avg_total_offside,  avg_ontarget_att_assist, avg_ontarget_scoring_att, avg_successful_final_third_passes, avg_left_pass, avg_right_pass)
+  summarise(mean(avg_mins_played), mean(avg_turnover), mean(avg_goals), mean(avg_big_chance_missed) , mean(avg_goal_assist), mean(avg_total_offside),  mean(avg_ontarget_att_assist), mean(avg_ontarget_scoring_att), mean(avg_successful_final_third_passes), mean(avg_left_pass), mean(avg_right_pass))
 
 #distinct(fw_nswl_stats)
 
@@ -449,23 +471,6 @@ starters_fw_nswl_stats
 
 ```
 
-
-
-
-```{r getting a date}
-library(stringr)
-
-# get the date into its own columns by year, month, day
-adv_player_stats$date <- 
-  str_sub(adv_player_stats$game_id,-10, -1)
-
-adv_player_stats <- adv_player_stats %>%
-  separate(date, c("year", "month", "day"), "-")
-
-adv_player_stats$date
-adv_player_stats$month
-adv_player_stats$year
-```
 
 ```{r}
 year_by_year_passing_accuracy <- adv_player_stats %>%
@@ -530,7 +535,9 @@ ggplotly(
 
 ```{r}
 year_by_year_passing_accuracy %>%
-  filter(player_name == "Christen Press")
+  filter(player_name == "Christen Press") %>%
+  group_by(year) %>%
+  summarize(mean(passing_acc))
 ```
 
 
