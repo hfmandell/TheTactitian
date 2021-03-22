@@ -9,9 +9,21 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+```{r}
+#install.packages("rlang")
+#install.packages("ggplot2")
+#install.packages("tidyverse")
+#install.packages("dplyr")
+#install.packages("stringr")
+#install.packages("lubridate")
+#install.packages("tidymodels")
+#install.packages("ggmap")
+```
+
 ```{r packages}
 #install.packages("devtools")
-library(devtools)
+install.packages("devtools")
 devtools::install_github("adror1/nwslR")
 
 library(ggplot2)
@@ -20,7 +32,6 @@ library(dplyr)
 library(tidyr)
 library(broom)
 library(praise)
-library(nwslR)
 library(plotly)
 ```
 
@@ -397,6 +408,8 @@ megan_rapinoe_annual_nswl_stats <- adv_player_stats %>%
 
 
 megan_rapinoe_annual_nswl_stats <- distinct(megan_rapinoe_annual_nswl_stats)
+
+megan_rapinoe_annual_nswl_stats
 
 write.csv(megan_rapinoe_annual_nswl_stats,"FW/megan_rapinoe_annual_nswl_stats.csv")
 

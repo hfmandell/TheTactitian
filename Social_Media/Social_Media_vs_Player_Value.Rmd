@@ -1,0 +1,162 @@
+---
+title: "Social Media & Market Value Exploration"
+author: "Hannah Mandell"
+date: "2/16/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(plotly)
+#install.packages("GGally")
+#install.packages("reshape2")
+```
+
+
+```{r read in the data}
+followers <- read.csv("socialmedia_followers.csv")
+player_value <- read.csv("player_market_values.csv")
+```
+
+
+```{r spring cleaing the data}
+followers <- followers %>%
+  select(-X_) %>%
+  select(-X_.1) %>%
+  select(-Sport)
+
+player_value <- player_value %>%
+  select(-X_) %>%
+  select(-X_.1)
+
+player_value <- player_value %>%
+  rename(Name = Player.name, Rank = Overall.rank, Market_Value = Market.value.at.10th.December.2020) 
+```
+
+
+```{r joining the data}
+media_and_value_joint <- merge(followers, player_value, by = 'Name')
+
+media_and_value_joint <- media_and_value_joint %>%
+  rename(Total_Followers = Total)
+
+write.csv(media_and_value_joint, "media_and_value_joint.csv")
+```
+
+```{r}
+media_and_value_joint %>%
+  ggplot(aes(x = Total_Followers, y = Market_Value)) +
+  geom_point(aes(color = Name), size = 3) +
+  labs(
+    title = "Social Media Influence vs. Player Market Value", 
+    x = "Total Social Media Followers", 
+    y = "Player Market Value (mil €)"
+  )
+  
+```
+
+```{r corr. btwn followers and value}
+total_followers_and_value_corr <- 
+  cor(media_and_value_joint$Total_Followers, media_and_value_joint$Market_Value)
+total_followers_and_value_corr
+```
+
+How beautiful, a ~slightly~ negative correlation between market value and total social media followers. What happens if we remove Ronaldo? He appears to be a bit of an outlier. 
+
+```{r removing ronaldo}
+media_and_value_joint[-2,]  %>%
+  ggplot(aes(x = Total_Followers, y = Market_Value)) +
+  geom_point(aes(color = Name), size = 3) +
+  labs(
+    title = "Social Media Influence vs. Player Market Value (without Ronaldo)", 
+    x = "Total Social Media Followers", 
+    y = "Player Market Value (mil €)"
+  )
+```
+```{r}
+no_ronaldo <- media_and_value_joint[-2,]
+
+total_followers_and_value_corr_no_ronaldo <- 
+  cor(no_ronaldo$Total_Followers, no_ronaldo$Market_Value)
+total_followers_and_value_corr_no_ronaldo
+```
+
+Ha! Now we see a slightly positive correlation, albeit still highly unsignificant.
+
+
+
+
+```{r clean up the data a bit more for the matrix}
+social_media_value_matrix_data <- media_and_value_joint %>%
+  rename('Market Value' = 'Market_Value') %>%
+  select(-League) %>%
+  select(-Rank) %>%
+  select(-Change.vs.October.2020) %>%
+  select(-Selected.currency) %>%
+  select(-Current.club..20.21.season.) %>%
+  select(-Current.league..20.21.season.) %>%
+  select(-Nationality) %>%
+  select(-Position) %>%
+  select(-Age) %>%
+  select(-Height..cm.) %>%
+  select(-Preferred.foot) %>%
+  select(-Intl..caps) %>%
+  select(-Intl..goals) %>%
+  select(-End.of.contract) %>%
+  select(-On.loan.from..parent.club.) %>%
+  select(-Agent)
+
+social_media_value_matrix_data <- social_media_value_matrix_data %>%
+  rename('Total Followers' = 'Total_Followers')
+```
+
+
+```{r correlation matrix: followers & value}
+source("https://raw.githubusercontent.com/briatte/ggcorr/master/ggcorr.R")
+ggcorr(social_media_value_matrix_data, size = 2.8, angle = 15, label = TRUE, label_size = 2, geom = "circle", low = "orange", mid = "white", high = "lightblue", layout.exp = 1)
+
+#+
+  #title('Correlation Between Individual Social Media Platforms and Market Value")
+
+```
+Note: TikTok Followers appears to have a very high correlation with Player Market Value, but it should be noted that there are only FOUR players in this dataset with TikTok data, and therefore the correlatoin is not much to regard,
+
+```{r correlation matrix: other various metrics}
+misc_value_matrix_data <- media_and_value_joint %>%
+  select(-League) %>%
+  select(-Rank) %>%
+  select(-Change.vs.October.2020) %>%
+  select(-Selected.currency) %>%
+  select(-Current.club..20.21.season.) %>%
+  select(-Current.league..20.21.season.) %>%
+  select(-Nationality) %>%
+  select(-Position) %>%
+  select(-End.of.contract) %>%
+  select(-On.loan.from..parent.club.) %>%
+  select(-Agent) %>%
+  select(-Facebook) %>%
+  select(-Instagram) %>%
+  select(-Twitter) %>%
+  select(-Youtube) %>%
+  select(-TikTok) %>%
+  select(-Weibo) %>%
+  select(-Total_Followers)
+
+```
+
+
+Just for fun, let's compare some of the other variables in our list to Market_Value and see what we get:
+
+```{r}
+
+ggcorr(misc_value_matrix_data, size = 4, angle = 15, label = TRUE, label_size = 2, geom = "circle", low = "orange", mid = "white", high = "lightblue", layout.exp = 1)
+```
+
